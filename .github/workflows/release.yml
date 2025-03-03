@@ -44,12 +44,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
             pkg-config \
             build-essential \
             libglib2.0-dev \
-            libgtk-3-dev \
-            libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev
+            libsoup-3.0-dev
 
       - name: Build CLI
         run: cargo build --release --target ${{ matrix.target }}
@@ -146,7 +149,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p artifacts
-          cp target/release/bundle/*/vscode-workspaces-editor-gui_*.* artifacts/
+          cp target/release/bundle/*/vscode-workspaces-editor-gui_*.{deb,rpm,AppImage} artifacts/
 
       - name: Prepare artifacts (macOS)
         if: matrix.os == 'macos-latest'
