@@ -5,7 +5,7 @@
   "identifier": "vn.vhn.vscode-workspaces-editor",
   "build": {
     "beforeDevCommand": "cd ../src-ui && pnpm dev",
-    "beforeBuildCommand": "node build-release-assets.js || node src-tauri/build-release-assets.js",
+    "beforeBuildCommand": "node build-release-assets.js || node src-tauri/build-release-assets.js || node ../src-tauri/build-release-assets.js",
     "frontendDist": "../src-ui/dist",
     "devUrl": "http://localhost:5173"
   },
