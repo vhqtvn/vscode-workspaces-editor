@@ -149,7 +149,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p artifacts
-          cp target/release/bundle/*/vscode-workspaces-editor-gui_*.{deb,rpm,AppImage} artifacts/
+          cp target/release/bundle/*/vscode-workspaces-editor-gui_*.{deb,AppImage} artifacts/
+          cp target/release/bundle/*/vscode-workspaces-editor-gui-*.rpm artifacts/
 
       - name: Prepare artifacts (macOS)
         if: matrix.os == 'macos-latest'
