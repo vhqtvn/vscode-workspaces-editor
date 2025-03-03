@@ -48,7 +48,8 @@ jobs:
             build-essential \
             libglib2.0-dev \
             libgtk-3-dev \
-            libsoup-3.0-dev
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
 
       - name: Build CLI
         run: cargo build --release --target ${{ matrix.target }}
@@ -145,13 +146,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p artifacts
-          cp "target/release/bundle/*/vscode-workspaces-editor-gui_"*.* artifacts/
+          cp target/release/bundle/*/vscode-workspaces-editor-gui_*.* artifacts/
 
       - name: Prepare artifacts (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           mkdir -p artifacts
-          cp -r "target/release/bundle/dmg/"*.app artifacts/
+          cp -r "target/release/bundle/macos/"*.app artifacts/
           cp -r "target/release/bundle/dmg/"*.dmg artifacts/vscode-workspaces-editor-gui-macos.dmg
           cd artifacts
           zip -r "vscode-workspaces-editor-gui-macos.zip" *.app
