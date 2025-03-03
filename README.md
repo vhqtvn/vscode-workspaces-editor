@@ -12,13 +12,79 @@ A powerful desktop application and terminal interface for managing Visual Studio
 
 ## Installation
 
-### Prerequisites
+### Automatic Installation
+
+We provide platform-specific installation scripts that automatically download and install the latest release.
+
+> **Note:** Currently, only x86_64 (64-bit) architecture is supported. ARM architecture support is planned for future releases.
+
+#### GUI Installation (Desktop Application)
+
+##### Windows
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/vhqtvn/vscode-workspaces-editor/main/scripts/gui/install_windows.ps1'))
+```
+
+##### macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vhqtvn/vscode-workspaces-editor/main/scripts/gui/install_macos.sh | bash
+```
+
+##### Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vhqtvn/vscode-workspaces-editor/main/scripts/gui/install_linux.sh | bash
+```
+
+#### CLI Installation (Terminal Interface)
+
+##### Windows
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/vhqtvn/vscode-workspaces-editor/main/scripts/cli/install_windows.ps1'))
+```
+
+##### macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vhqtvn/vscode-workspaces-editor/main/scripts/cli/install_macos.sh | bash
+```
+
+##### Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vhqtvn/vscode-workspaces-editor/main/scripts/cli/install_linux.sh | bash
+```
+
+### Manual Installation
+
+#### Download Binaries
+
+You can download the latest binaries from the [Releases page](https://github.com/vhqtvn/vscode-workspaces-editor/releases).
+
+Available packages:
+
+**GUI (Desktop Application):**
+- Windows: `.msi` installer or `.zip` archive
+- macOS: `.dmg` disk image
+- Linux: `.AppImage` or `.deb`/`.rpm` packages
+
+**CLI (Terminal Interface):**
+- Windows: `.zip` archive containing the CLI executable
+- macOS: `.tar.gz` archive containing the CLI binary
+- Linux: `.tar.gz` archive containing the CLI binary
+
+#### Building from Source
+
+##### Prerequisites
 
 - Rust (latest stable version)
 - Node.js (for UI development)
 - Visual Studio Code
 
-### Building from Source
+##### Build Steps
 
 1. Clone the repository:
 ```bash
@@ -56,6 +122,9 @@ vscode-workspaces-editor-gui
 - `src/` - Core Rust application code
 - `src-tauri/` - Tauri application configuration and native code
 - `src-ui/` - Web-based user interface code
+- `scripts/` - Installation scripts for different platforms
+  - `scripts/gui/` - GUI-specific installation scripts
+  - `scripts/cli/` - CLI-specific installation scripts
 
 ## Dependencies
 
