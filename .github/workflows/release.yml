@@ -80,7 +80,20 @@ jobs:
             gcc-arm-linux-gnueabihf \
             g++-arm-linux-gnueabihf \
             libc6-dev-arm64-cross \
-            libc6-dev-armhf-cross
+            libc6-dev-armhf-cross \
+            pkg-config-aarch64-linux-gnu \
+            pkg-config-arm-linux-gnueabihf
+          
+          # Set up PKG_CONFIG for cross-compilation
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            echo "PKG_CONFIG=/usr/bin/aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
+            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
+          elif [[ "${{ matrix.target }}" == "armv7-unknown-linux-gnueabihf" ]]; then
+            echo "PKG_CONFIG=/usr/bin/arm-linux-gnueabihf-pkg-config" >> $GITHUB_ENV
+            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
+          fi
 
       - name: Build CLI
         run: cargo build --release --target ${{ matrix.target }}
@@ -138,8 +151,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set Rust target
+        id: set-rust-target
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-latest" && "${{ matrix.arch }}" == "arm64" ]]; then
+            echo "RUST_TARGET=aarch64-apple-darwin" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.os }}" == "windows-latest" && "${{ matrix.arch }}" == "arm64" ]]; then
+            echo "RUST_TARGET=aarch64-pc-windows-msvc" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" && "${{ matrix.arch }}" == "arm64" ]]; then
+            echo "RUST_TARGET=aarch64-unknown-linux-gnu" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" && "${{ matrix.arch }}" == "arm" ]]; then
+            echo "RUST_TARGET=armv7-unknown-linux-gnueabihf" >> $GITHUB_OUTPUT
+          else
+            echo "RUST_TARGET=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ steps.set-rust-target.outputs.RUST_TARGET != '' && steps.set-rust-target.outputs.RUST_TARGET || '' }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -161,7 +192,6 @@ jobs:
             libglib2.0-dev \
             libsoup-3.0-dev
 
-      # Additional dependencies for ARM cross-compilation on Linux
       - name: Install ARM cross-compilation tools
         if: matrix.os == 'ubuntu-latest' && (matrix.arch == 'arm64' || matrix.arch == 'arm')
         run: |
@@ -172,7 +202,32 @@ jobs:
             gcc-arm-linux-gnueabihf \
             g++-arm-linux-gnueabihf \
             libc6-dev-arm64-cross \
-            libc6-dev-armhf-cross
+            libc6-dev-armhf-cross \
+            pkg-config-aarch64-linux-gnu \
+            pkg-config-arm-linux-gnueabihf \
+            libglib2.0-dev:arm64 \
+            libglib2.0-dev:armhf \
+            libgtk-3-dev:arm64 \
+            libgtk-3-dev:armhf \
+            libwebkit2gtk-4.1-dev:arm64 \
+            libwebkit2gtk-4.1-dev:armhf \
+            libsoup-3.0-dev:arm64 \
+            libsoup-3.0-dev:armhf
+          
+          sudo dpkg --add-architecture arm64
+          sudo dpkg --add-architecture armhf
+          sudo apt-get update
+          
+          # Set up PKG_CONFIG for cross-compilation
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            echo "PKG_CONFIG=/usr/bin/aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
+            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
+          elif [[ "${{ matrix.arch }}" == "arm" ]]; then
+            echo "PKG_CONFIG=/usr/bin/arm-linux-gnueabihf-pkg-config" >> $GITHUB_ENV
+            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
+          fi
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -203,7 +258,37 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: |
           cd src-tauri
-          cargo tauri build --target ${{ matrix.arch }}
+          # Properly format the build command based on platform and architecture
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+              echo "Building for macOS ARM64"
+              export CARGO_BUILD_TARGET="aarch64-apple-darwin"
+            else
+              echo "Building for macOS x64"
+              export CARGO_BUILD_TARGET="x86_64-apple-darwin"
+            fi
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+              echo "Building for Windows ARM64"
+              export CARGO_BUILD_TARGET="aarch64-pc-windows-msvc"
+            else
+              echo "Building for Windows x64"
+              export CARGO_BUILD_TARGET="x86_64-pc-windows-msvc"
+            fi
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+              echo "Building for Linux ARM64"
+              export CARGO_BUILD_TARGET="aarch64-unknown-linux-gnu"
+            elif [[ "${{ matrix.arch }}" == "arm" ]]; then
+              echo "Building for Linux ARM"
+              export CARGO_BUILD_TARGET="armv7-unknown-linux-gnueabihf"
+            else
+              echo "Building for Linux x64"
+              export CARGO_BUILD_TARGET="x86_64-unknown-linux-gnu"
+            fi
+          fi
+          echo "CARGO_BUILD_TARGET=${CARGO_BUILD_TARGET:-none}"
+          cargo tauri build --target $CARGO_BUILD_TARGET
           cd ..
 
       - name: Prepare artifacts (Linux)
