@@ -47,7 +47,8 @@ jobs:
             pkg-config \
             build-essential \
             libglib2.0-dev \
-            libgtk-3-dev
+            libgtk-3-dev \
+            libsoup3-dev
 
       - name: Build CLI
         run: cargo build --release --target ${{ matrix.target }}
@@ -75,7 +76,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             target: linux
           - os: macos-latest
             target: macos
@@ -94,18 +95,19 @@ jobs:
           node-version: 'lts/*'
 
       - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-20.04'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libgtk-3-dev \
-            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
             pkg-config \
             build-essential \
-            libglib2.0-dev
+            libglib2.0-dev \
+            libsoup3-dev
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -140,25 +142,26 @@ jobs:
           cd ..
 
       - name: Prepare artifacts (Linux)
-        if: matrix.os == 'ubuntu-20.04'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p artifacts
-          cp "src-tauri/target/release/bundle/appimage/vscode-workspaces-editor-gui_"*.AppImage artifacts/
-          cp "src-tauri/target/release/bundle/deb/vscode-workspaces-editor-gui_"*.deb artifacts/
+          cp "target/release/bundle/*/vscode-workspaces-editor-gui_"*.* artifacts/
 
       - name: Prepare artifacts (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           mkdir -p artifacts
-          cp -r "src-tauri/target/release/bundle/dmg/"*.app artifacts/
+          cp -r "target/release/bundle/dmg/"*.app artifacts/
+          cp -r "target/release/bundle/dmg/"*.dmg artifacts/vscode-workspaces-editor-gui-macos.dmg
           cd artifacts
           zip -r "vscode-workspaces-editor-gui-macos.zip" *.app
+          rm -rf *.app
 
       - name: Prepare artifacts (Windows)
         if: matrix.os == 'windows-latest'
         run: |
           mkdir artifacts
-          copy "src-tauri\target\release\bundle\msi\*.msi" artifacts\
+          copy "target\release\bundle\msi\*.msi" artifacts\
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

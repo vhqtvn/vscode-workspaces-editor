@@ -5,7 +5,7 @@
   "identifier": "vn.vhn.vscode-workspaces-editor",
   "build": {
     "beforeDevCommand": "cd ../src-ui && pnpm dev",
-    "beforeBuildCommand": "cd src-ui; pnpm build",
+    "beforeBuildCommand": "node -e \"const fs = require('fs'); const cp = require('child_process'); const dir = fs.existsSync('src-ui') ? 'src-ui' : '../src-ui'; process.chdir(dir); cp.execSync('pnpm build', {stdio: 'inherit'});\"",
     "frontendDist": "../src-ui/dist",
     "devUrl": "http://localhost:5173"
   },
