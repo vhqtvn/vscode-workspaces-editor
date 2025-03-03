@@ -30,6 +30,22 @@ jobs:
             target: x86_64-apple-darwin
             artifact_name: vscode-workspaces-editor
             asset_name: vscode-workspaces-editor-macos-amd64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: vscode-workspaces-editor
+            asset_name: vscode-workspaces-editor-linux-arm64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            artifact_name: vscode-workspaces-editor.exe
+            asset_name: vscode-workspaces-editor-windows-arm64.exe
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: vscode-workspaces-editor
+            asset_name: vscode-workspaces-editor-macos-arm64
+          - os: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+            artifact_name: vscode-workspaces-editor
+            asset_name: vscode-workspaces-editor-linux-arm
 
     steps:
       - uses: actions/checkout@v4
@@ -53,6 +69,18 @@ jobs:
             build-essential \
             libglib2.0-dev \
             libsoup-3.0-dev
+
+      - name: Setup for ARM Linux cross-compilation
+        if: matrix.target == 'aarch64-unknown-linux-gnu' || matrix.target == 'armv7-unknown-linux-gnueabihf'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabihf \
+            g++-arm-linux-gnueabihf \
+            libc6-dev-arm64-cross \
+            libc6-dev-armhf-cross
 
       - name: Build CLI
         run: cargo build --release --target ${{ matrix.target }}
@@ -80,12 +108,32 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # x86_64 builds
           - os: ubuntu-latest
             target: linux
+            arch: x64
           - os: macos-latest
             target: macos
+            arch: x64
           - os: windows-latest
             target: windows
+            arch: x64
+          
+          # ARM64 builds
+          - os: ubuntu-latest
+            target: linux
+            arch: arm64
+          - os: macos-latest
+            target: macos
+            arch: arm64
+          - os: windows-latest
+            target: windows
+            arch: arm64
+          
+          # ARM 32-bit for Linux
+          - os: ubuntu-latest
+            target: linux
+            arch: arm
 
     steps:
       - uses: actions/checkout@v4
@@ -112,6 +160,19 @@ jobs:
             build-essential \
             libglib2.0-dev \
             libsoup-3.0-dev
+
+      # Additional dependencies for ARM cross-compilation on Linux
+      - name: Install ARM cross-compilation tools
+        if: matrix.os == 'ubuntu-latest' && (matrix.arch == 'arm64' || matrix.arch == 'arm')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabihf \
+            g++-arm-linux-gnueabihf \
+            libc6-dev-arm64-cross \
+            libc6-dev-armhf-cross
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -142,36 +203,36 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: |
           cd src-tauri
-          cargo tauri build
+          cargo tauri build --target ${{ matrix.arch }}
           cd ..
 
       - name: Prepare artifacts (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p artifacts
-          cp target/release/bundle/*/vscode-workspaces-editor-gui_*.{deb,AppImage} artifacts/
-          cp target/release/bundle/*/vscode-workspaces-editor-gui-*.rpm artifacts/
+          cp target/release/bundle/*/vscode-workspaces-editor-gui_*.{deb,AppImage} artifacts/vscode-workspaces-editor-gui-linux-${{ matrix.arch }}.{deb,AppImage} 2>/dev/null || true
+          cp target/release/bundle/*/vscode-workspaces-editor-gui-*.rpm artifacts/vscode-workspaces-editor-gui-linux-${{ matrix.arch }}.rpm 2>/dev/null || true
 
       - name: Prepare artifacts (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           mkdir -p artifacts
-          cp -r "target/release/bundle/macos/"*.app artifacts/
-          cp -r "target/release/bundle/dmg/"*.dmg artifacts/vscode-workspaces-editor-gui-macos.dmg
+          cp -r "target/release/bundle/macos/"*.app artifacts/vscode-workspaces-editor-gui-macos-${{ matrix.arch }}.app
+          cp -r "target/release/bundle/dmg/"*.dmg artifacts/vscode-workspaces-editor-gui-macos-${{ matrix.arch }}.dmg
           cd artifacts
-          zip -r "vscode-workspaces-editor-gui-macos.zip" *.app
+          zip -r "vscode-workspaces-editor-gui-macos-${{ matrix.arch }}.zip" *.app
           rm -rf *.app
 
       - name: Prepare artifacts (Windows)
         if: matrix.os == 'windows-latest'
         run: |
           mkdir artifacts
-          copy "target\release\bundle\msi\*.msi" artifacts\
+          copy "target\release\bundle\msi\*.msi" artifacts\vscode-workspaces-editor-gui-windows-${{ matrix.arch }}.msi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gui-${{ matrix.target }}
+          name: gui-${{ matrix.target }}-${{ matrix.arch }}
           path: artifacts/*
 
   create-release:
@@ -193,7 +254,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: artifacts/**/*
-          draft: true
+          draft: false
           prerelease: false
           generate_release_notes: true
         env:
