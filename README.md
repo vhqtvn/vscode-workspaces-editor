@@ -16,7 +16,7 @@ A powerful desktop application and terminal interface for managing Visual Studio
 
 We provide platform-specific installation scripts that automatically download and install the latest release.
 
-> **Note:** Currently, only x86_64 (64-bit) architecture is supported. ARM architecture support is planned for future releases.
+> **Note:** ARM architecture (ARM64/aarch64) is fully supported. The installer scripts will detect your system architecture and download the appropriate version.
 
 #### GUI Installation (Desktop Application)
 

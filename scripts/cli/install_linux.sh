@@ -26,11 +26,17 @@ mkdir -p "$INSTALL_DIR"
 ARCH=$(uname -m)
 case "$ARCH" in
     x86_64)
-        ARCH_NAME="x64"
+        ARCH_NAME="amd64"
+        ;;
+    aarch64|arm64)
+        ARCH_NAME="arm64"
+        ;;
+    armv7*|armhf)
+        ARCH_NAME="arm"
         ;;
     *)
         echo -e "${RED}Unsupported architecture: $ARCH${NC}"
-        echo "Currently only x86_64 is supported. ARM architecture support is coming in future releases."
+        echo "Currently only x86_64, arm64, and armv7 are supported."
         exit 1
         ;;
 esac
@@ -38,41 +44,26 @@ esac
 # Download the latest release
 echo -e "${CYAN}Downloading the latest CLI release...${NC}"
 LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
-DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*cli.*linux.*$ARCH_NAME.*tar.gz" | cut -d '"' -f 4 | head -n 1)
-
-# If CLI-specific package not found, try generic Linux package
-if [ -z "$DOWNLOAD_URL" ]; then
-    DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*linux.*$ARCH_NAME.*tar.gz" | cut -d '"' -f 4 | head -n 1)
-fi
+DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-linux-$ARCH_NAME[^\"]*" | cut -d '"' -f 4 | head -n 1)
 
 if [ -z "$DOWNLOAD_URL" ]; then
-    echo -e "${RED}Error: Could not find Linux CLI package in the latest release.${NC}"
+    echo -e "${RED}Error: Could not find Linux CLI binary for $ARCH_NAME in the latest release.${NC}"
     echo "Please check the repository or try manual installation."
     exit 1
 fi
 
-TEMP_TAR="/tmp/vscode-workspaces-editor-cli.tar.gz"
+TEMP_BIN="/tmp/vscode-workspaces-editor"
 echo -e "${CYAN}Downloading from: $DOWNLOAD_URL${NC}"
-curl -L "$DOWNLOAD_URL" -o "$TEMP_TAR"
+curl -L "$DOWNLOAD_URL" -o "$TEMP_BIN"
+chmod +x "$TEMP_BIN"
 
-# Extract the archive
-echo -e "${CYAN}Extracting and installing...${NC}"
-TEMP_DIR="/tmp/vscode-workspaces-editor-cli"
-mkdir -p "$TEMP_DIR"
-tar -xzf "$TEMP_TAR" -C "$TEMP_DIR"
-
-# Find and copy the CLI binary
-CLI_BIN=$(find "$TEMP_DIR" -name "vscode-workspaces-editor" -type f | head -n 1)
-if [ -z "$CLI_BIN" ]; then
-    echo -e "${RED}Error: CLI binary not found in the downloaded package.${NC}"
-    exit 1
-fi
-
-cp "$CLI_BIN" "$INSTALL_DIR/vscode-workspaces-editor"
-chmod +x "$INSTALL_DIR/vscode-workspaces-editor"
+# Install the binary
+echo -e "${CYAN}Installing CLI binary...${NC}"
+cp "$TEMP_BIN" "$INSTALL_DIR/$APP_NAME"
+chmod +x "$INSTALL_DIR/$APP_NAME"
 
 # Clean up
-rm -rf "$TEMP_DIR" "$TEMP_TAR"
+rm -f "$TEMP_BIN"
 
 echo -e "${GREEN}CLI Installation completed successfully!${NC}"
 echo "You can now run 'vscode-workspaces-editor' from the terminal."

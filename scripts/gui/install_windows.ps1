@@ -9,32 +9,39 @@ $InstallDir = "$env:LOCALAPPDATA\Programs\VSCodeWorkspacesEditor"
 $DesktopShortcut = "$env:USERPROFILE\Desktop\VSCode Workspaces Editor.lnk"
 $StartMenuDir = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\VSCode Workspaces Editor"
 
-# Check architecture
-$Architecture = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
-if ($Architecture -eq "ARM64") {
-    Write-Host "Error: ARM architecture is not yet supported." -ForegroundColor Red
-    Write-Host "Currently only x64 (64-bit) Windows is supported. ARM support is planned for future releases." -ForegroundColor Red
-    exit 1
-}
-
 # Create necessary directories
 Write-Host "Creating installation directories..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 New-Item -ItemType Directory -Force -Path $StartMenuDir | Out-Null
+
+# Determine system architecture
+$Architecture = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
+if ($Architecture -eq "AMD64") {
+    $ArchName = "x64"
+}
+elseif ($Architecture -eq "ARM64") {
+    $ArchName = "arm64"
+}
+else {
+    Write-Host "Error: Unsupported architecture: $Architecture" -ForegroundColor Red
+    Write-Host "Currently only x64 (AMD64) and ARM64 are supported." -ForegroundColor Red
+    exit 1
+}
 
 # Download the latest release
 try {
     Write-Host "Downloading the latest GUI release..." -ForegroundColor Cyan
     $ReleasesUri = "https://api.github.com/repos/$GitHubRepo/releases/latest"
     $LatestRelease = Invoke-RestMethod -Uri $ReleasesUri -Method Get
-    $Asset = $LatestRelease.assets | Where-Object { $_.name -like "*windows*x64*.msi" }
+    $Asset = $LatestRelease.assets | Where-Object { $_.name -like "*vscode-workspaces-editor-gui-windows-$ArchName.msi" }
     
     if (-not $Asset) {
-        Write-Host "No Windows installer found in the latest release. Please check the repository or try manual installation." -ForegroundColor Red
+        Write-Host "No Windows MSI installer found for $ArchName in the latest release. Please check the repository or try manual installation." -ForegroundColor Red
         exit 1
     }
     
     $InstallerPath = "$env:TEMP\vscode-workspaces-editor-gui-installer.msi"
+    Write-Host "Downloading from: $($Asset.browser_download_url)" -ForegroundColor Cyan
     Invoke-WebRequest -Uri $Asset.browser_download_url -OutFile $InstallerPath
     
     # Run the installer

@@ -12,55 +12,48 @@ INSTALL_DIR="$HOME/.local/bin"
 echo -e "\033[36mVSCode Workspaces Editor CLI Installer for macOS\033[0m"
 echo "========================================"
 
-# Check architecture
-ARCH=$(uname -m)
-if [[ "$ARCH" == "arm64" ]]; then
-    echo -e "\033[31mError: ARM architecture (Apple Silicon) is not yet supported.\033[0m"
-    echo "Currently only Intel (x86_64) Macs are supported. ARM support is planned for future releases."
-    exit 1
-fi
-
 # Create necessary directories
 mkdir -p "$INSTALL_DIR"
+
+# Determine system architecture
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64)
+        ARCH_NAME="amd64"
+        ;;
+    arm64)
+        ARCH_NAME="arm64"
+        ;;
+    *)
+        echo -e "\033[31mError: Unsupported architecture: $ARCH\033[0m"
+        echo "Currently only x86_64 and arm64 are supported."
+        exit 1
+        ;;
+esac
 
 # Download the latest release
 echo -e "\033[36mDownloading the latest CLI release...\033[0m"
 LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
-DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*cli.*macos.*x64.*tar.gz" | cut -d '"' -f 4 | head -n 1)
-
-# If cli-specific package not found, try generic macOS package
-if [ -z "$DOWNLOAD_URL" ]; then
-    DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*macos.*x64.*tar.gz" | cut -d '"' -f 4 | head -n 1)
-fi
+DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-macos-$ARCH_NAME[^\"]*" | cut -d '"' -f 4 | head -n 1)
 
 if [ -z "$DOWNLOAD_URL" ]; then
-    echo -e "\033[31mError: Could not find macOS CLI package in the latest release.\033[0m"
+    echo -e "\033[31mError: Could not find macOS CLI binary for $ARCH_NAME in the latest release.\033[0m"
     echo "Please check the repository or try manual installation."
     exit 1
 fi
 
-TEMP_TAR="/tmp/vscode-workspaces-editor-cli.tar.gz"
+TEMP_BIN="/tmp/vscode-workspaces-editor"
 echo -e "\033[36mDownloading from: $DOWNLOAD_URL\033[0m"
-curl -L "$DOWNLOAD_URL" -o "$TEMP_TAR"
+curl -L "$DOWNLOAD_URL" -o "$TEMP_BIN"
+chmod +x "$TEMP_BIN"
 
-# Extract the archive
-echo -e "\033[36mExtracting and installing...\033[0m"
-TEMP_DIR="/tmp/vscode-workspaces-editor-cli"
-mkdir -p "$TEMP_DIR"
-tar -xzf "$TEMP_TAR" -C "$TEMP_DIR"
-
-# Find and copy the CLI binary
-CLI_BIN=$(find "$TEMP_DIR" -name "vscode-workspaces-editor" -type f | head -n 1)
-if [ -z "$CLI_BIN" ]; then
-    echo -e "\033[31mError: CLI binary not found in the downloaded package.\033[0m"
-    exit 1
-fi
-
-cp "$CLI_BIN" "$INSTALL_DIR/vscode-workspaces-editor"
-chmod +x "$INSTALL_DIR/vscode-workspaces-editor"
+# Install the binary
+echo -e "\033[36mInstalling CLI binary...\033[0m"
+cp "$TEMP_BIN" "$INSTALL_DIR/$APP_NAME"
+chmod +x "$INSTALL_DIR/$APP_NAME"
 
 # Clean up
-rm -rf "$TEMP_DIR" "$TEMP_TAR"
+rm -f "$TEMP_BIN"
 
 # Add to PATH if needed
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then

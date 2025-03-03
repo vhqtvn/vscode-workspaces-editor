@@ -12,13 +12,21 @@ INSTALL_DIR="/Applications"
 echo -e "\033[36mVSCode Workspaces Editor GUI Installer for macOS\033[0m"
 echo "========================================"
 
-# Check architecture
+# Determine system architecture
 ARCH=$(uname -m)
-if [[ "$ARCH" == "arm64" ]]; then
-    echo -e "\033[31mError: ARM architecture (Apple Silicon) is not yet supported.\033[0m"
-    echo "Currently only Intel (x86_64) Macs are supported. ARM support is planned for future releases."
-    exit 1
-fi
+case "$ARCH" in
+    x86_64)
+        ARCH_NAME="x64"
+        ;;
+    arm64)
+        ARCH_NAME="arm64"
+        ;;
+    *)
+        echo -e "\033[31mError: Unsupported architecture: $ARCH\033[0m"
+        echo "Currently only x86_64 and arm64 are supported."
+        exit 1
+        ;;
+esac
 
 # Check if Homebrew is installed
 if ! command -v brew &> /dev/null; then
@@ -34,16 +42,18 @@ fi
 
 # Download the latest release
 echo -e "\033[36mDownloading the latest GUI release...\033[0m"
-LATEST_RELEASE_URL=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest" | grep "browser_download_url.*\.dmg" | grep -i "macos" | cut -d '"' -f 4)
+LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
+DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-gui-macos-$ARCH_NAME\.dmg[^\"]*" | cut -d '"' -f 4 | head -n 1)
 
-if [ -z "$LATEST_RELEASE_URL" ]; then
-    echo -e "\033[31mError: Could not find macOS installer in the latest release.\033[0m"
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo -e "\033[31mError: Could not find macOS DMG installer for $ARCH_NAME in the latest release.\033[0m"
     echo "Please check the repository or try manual installation."
     exit 1
 fi
 
 TEMP_DMG="/tmp/vscode-workspaces-editor-gui.dmg"
-curl -L "$LATEST_RELEASE_URL" -o "$TEMP_DMG"
+echo -e "\033[36mDownloading from: $DOWNLOAD_URL\033[0m"
+curl -L "$DOWNLOAD_URL" -o "$TEMP_DMG"
 
 # Mount the DMG
 echo -e "\033[36mMounting disk image...\033[0m"
