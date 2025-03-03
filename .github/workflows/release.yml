@@ -80,19 +80,27 @@ jobs:
             gcc-arm-linux-gnueabihf \
             g++-arm-linux-gnueabihf \
             libc6-dev-arm64-cross \
-            libc6-dev-armhf-cross \
-            pkg-config-aarch64-linux-gnu \
-            pkg-config-arm-linux-gnueabihf
+            libc6-dev-armhf-cross
           
           # Set up PKG_CONFIG for cross-compilation
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            echo "PKG_CONFIG=/usr/bin/aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
+            # Create a wrapper script for aarch64 pkg-config
+            echo '#!/bin/bash
+            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+            export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+            exec pkg-config --static "$@"' | sudo tee /usr/local/bin/aarch64-linux-gnu-pkg-config
+            sudo chmod +x /usr/local/bin/aarch64-linux-gnu-pkg-config
+            echo "PKG_CONFIG=/usr/local/bin/aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
             echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
           elif [[ "${{ matrix.target }}" == "armv7-unknown-linux-gnueabihf" ]]; then
-            echo "PKG_CONFIG=/usr/bin/arm-linux-gnueabihf-pkg-config" >> $GITHUB_ENV
+            # Create a wrapper script for arm pkg-config
+            echo '#!/bin/bash
+            export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
+            export PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
+            exec pkg-config --static "$@"' | sudo tee /usr/local/bin/arm-linux-gnueabihf-pkg-config
+            sudo chmod +x /usr/local/bin/arm-linux-gnueabihf-pkg-config
+            echo "PKG_CONFIG=/usr/local/bin/arm-linux-gnueabihf-pkg-config" >> $GITHUB_ENV
             echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
           fi
 
       - name: Build CLI
@@ -202,9 +210,14 @@ jobs:
             gcc-arm-linux-gnueabihf \
             g++-arm-linux-gnueabihf \
             libc6-dev-arm64-cross \
-            libc6-dev-armhf-cross \
-            pkg-config-aarch64-linux-gnu \
-            pkg-config-arm-linux-gnueabihf \
+            libc6-dev-armhf-cross
+          
+          sudo dpkg --add-architecture arm64
+          sudo dpkg --add-architecture armhf
+          sudo apt-get update
+          
+          # Install ARM architecture libraries
+          sudo apt-get install -y \
             libglib2.0-dev:arm64 \
             libglib2.0-dev:armhf \
             libgtk-3-dev:arm64 \
@@ -214,19 +227,25 @@ jobs:
             libsoup-3.0-dev:arm64 \
             libsoup-3.0-dev:armhf
           
-          sudo dpkg --add-architecture arm64
-          sudo dpkg --add-architecture armhf
-          sudo apt-get update
-          
           # Set up PKG_CONFIG for cross-compilation
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            echo "PKG_CONFIG=/usr/bin/aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
+            # Create a wrapper script for aarch64 pkg-config
+            echo '#!/bin/bash
+            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+            export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+            exec pkg-config --static "$@"' | sudo tee /usr/local/bin/aarch64-linux-gnu-pkg-config
+            sudo chmod +x /usr/local/bin/aarch64-linux-gnu-pkg-config
+            echo "PKG_CONFIG=/usr/local/bin/aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
             echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
           elif [[ "${{ matrix.arch }}" == "arm" ]]; then
-            echo "PKG_CONFIG=/usr/bin/arm-linux-gnueabihf-pkg-config" >> $GITHUB_ENV
+            # Create a wrapper script for arm pkg-config
+            echo '#!/bin/bash
+            export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
+            export PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
+            exec pkg-config --static "$@"' | sudo tee /usr/local/bin/arm-linux-gnueabihf-pkg-config
+            sudo chmod +x /usr/local/bin/arm-linux-gnueabihf-pkg-config
+            echo "PKG_CONFIG=/usr/local/bin/arm-linux-gnueabihf-pkg-config" >> $GITHUB_ENV
             echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
           fi
 
       - name: Install pnpm
