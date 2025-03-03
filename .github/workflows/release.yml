@@ -30,10 +30,6 @@ jobs:
             target: x86_64-apple-darwin
             artifact_name: vscode-workspaces-editor
             asset_name: vscode-workspaces-editor-macos-amd64
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            artifact_name: vscode-workspaces-editor
-            asset_name: vscode-workspaces-editor-linux-arm64
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             artifact_name: vscode-workspaces-editor.exe
@@ -42,10 +38,6 @@ jobs:
             target: aarch64-apple-darwin
             artifact_name: vscode-workspaces-editor
             asset_name: vscode-workspaces-editor-macos-arm64
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
-            artifact_name: vscode-workspaces-editor
-            asset_name: vscode-workspaces-editor-linux-arm
 
     steps:
       - uses: actions/checkout@v4
@@ -69,87 +61,6 @@ jobs:
             build-essential \
             libglib2.0-dev \
             libsoup-3.0-dev
-
-      - name: Setup for ARM Linux cross-compilation
-        if: matrix.target == 'aarch64-unknown-linux-gnu' || matrix.target == 'armv7-unknown-linux-gnueabihf'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabihf \
-            g++-arm-linux-gnueabihf \
-            libc6-dev-arm64-cross \
-            libc6-dev-armhf-cross
-
-          # Add ARM architectures
-          sudo dpkg --add-architecture arm64
-          sudo dpkg --add-architecture armhf
-          sudo apt-get update
-
-          # Install ARM specific development libraries
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            sudo apt-get install -y \
-              libglib2.0-dev:arm64 \
-              libgtk-3-dev:arm64 \
-              libwebkit2gtk-4.1-dev:arm64 \
-              libsoup-3.0-dev:arm64
-          elif [[ "${{ matrix.target }}" == "armv7-unknown-linux-gnueabihf" ]]; then
-            sudo apt-get install -y \
-              libglib2.0-dev:armhf \
-              libgtk-3-dev:armhf \
-              libwebkit2gtk-4.1-dev:armhf \
-              libsoup-3.0-dev:armhf
-          fi
-          
-          # Debug: Check if glib-2.0.pc exists for the target architecture
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            echo "Checking for glib-2.0.pc for aarch64..."
-            find /usr -name "glib-2.0.pc" | grep aarch64
-          elif [[ "${{ matrix.target }}" == "armv7-unknown-linux-gnueabihf" ]]; then
-            echo "Checking for glib-2.0.pc for armhf..."
-            find /usr -name "glib-2.0.pc" | grep arm
-          fi
-          
-          # Set up PKG_CONFIG for cross-compilation
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            # Set env vars directly for this platform
-            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
-            echo "PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
-            
-            # Also create a wrapper script as a backup approach
-            echo '#!/bin/bash
-            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
-            export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
-            export PKG_CONFIG_ALLOW_CROSS=1
-            exec pkg-config "$@"' | sudo tee /usr/local/bin/aarch64-linux-gnu-pkg-config
-            sudo chmod +x /usr/local/bin/aarch64-linux-gnu-pkg-config
-            echo "PKG_CONFIG=/usr/local/bin/aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
-          elif [[ "${{ matrix.target }}" == "armv7-unknown-linux-gnueabihf" ]]; then
-            # Set env vars directly for this platform
-            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
-            echo "PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
-            
-            # Also create a wrapper script as a backup approach
-            echo '#!/bin/bash
-            export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
-            export PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
-            export PKG_CONFIG_ALLOW_CROSS=1
-            exec pkg-config "$@"' | sudo tee /usr/local/bin/arm-linux-gnueabihf-pkg-config
-            sudo chmod +x /usr/local/bin/arm-linux-gnueabihf-pkg-config
-            echo "PKG_CONFIG=/usr/local/bin/arm-linux-gnueabihf-pkg-config" >> $GITHUB_ENV
-          fi
-          
-          # Debug: Test pkg-config for glib-2.0
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            echo "Testing pkg-config for glib-2.0 for aarch64..."
-            /usr/local/bin/aarch64-linux-gnu-pkg-config --modversion glib-2.0 || echo "pkg-config test failed"
-          elif [[ "${{ matrix.target }}" == "armv7-unknown-linux-gnueabihf" ]]; then
-            echo "Testing pkg-config for glib-2.0 for arm..."
-            /usr/local/bin/arm-linux-gnueabihf-pkg-config --modversion glib-2.0 || echo "pkg-config test failed"
-          fi
 
       - name: Build CLI
         run: cargo build --release --target ${{ matrix.target }}
@@ -188,10 +99,7 @@ jobs:
             target: windows
             arch: x64
           
-          # ARM64 builds
-          - os: ubuntu-latest
-            target: linux
-            arch: arm64
+          # ARM64 builds (except Linux)
           - os: macos-latest
             target: macos
             arch: arm64
@@ -219,10 +127,6 @@ jobs:
             echo "RUST_TARGET=aarch64-pc-windows-msvc" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.os }}" == "windows-latest" && "${{ matrix.arch }}" == "x64" ]]; then
             echo "RUST_TARGET=x86_64-pc-windows-msvc" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.os }}" == "ubuntu-latest" && "${{ matrix.arch }}" == "arm64" ]]; then
-            echo "RUST_TARGET=aarch64-unknown-linux-gnu" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.os }}" == "ubuntu-latest" && "${{ matrix.arch }}" == "arm" ]]; then
-            echo "RUST_TARGET=armv7-unknown-linux-gnueabihf" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.os }}" == "ubuntu-latest" && "${{ matrix.arch }}" == "x64" ]]; then
             echo "RUST_TARGET=x86_64-unknown-linux-gnu" >> $GITHUB_OUTPUT
           else
@@ -255,92 +159,6 @@ jobs:
             libglib2.0-dev \
             libsoup-3.0-dev
 
-      - name: Install ARM cross-compilation tools
-        if: matrix.os == 'ubuntu-latest' && (matrix.arch == 'arm64' || matrix.arch == 'arm')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabihf \
-            g++-arm-linux-gnueabihf \
-            libc6-dev-arm64-cross \
-            libc6-dev-armhf-cross
-          
-          sudo dpkg --add-architecture arm64
-          sudo dpkg --add-architecture armhf
-          sudo apt-get update
-          
-          # Install ARM architecture libraries with more specific packages
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            sudo apt-get install -y \
-              libglib2.0-dev:arm64 \
-              libgtk-3-dev:arm64 \
-              libwebkit2gtk-4.1-dev:arm64 \
-              libsoup-3.0-dev:arm64 \
-              libatk1.0-dev:arm64 \
-              libpango1.0-dev:arm64 \
-              libcairo2-dev:arm64
-          elif [[ "${{ matrix.arch }}" == "arm" ]]; then
-            sudo apt-get install -y \
-              libglib2.0-dev:armhf \
-              libgtk-3-dev:armhf \
-              libwebkit2gtk-4.1-dev:armhf \
-              libsoup-3.0-dev:armhf \
-              libatk1.0-dev:armhf \
-              libpango1.0-dev:armhf \
-              libcairo2-dev:armhf
-          fi
-          
-          # Debug: Check if glib-2.0.pc exists for the target architecture
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            echo "Checking for glib-2.0.pc for aarch64..."
-            find /usr -name "glib-2.0.pc" | grep aarch64
-          elif [[ "${{ matrix.arch }}" == "arm" ]]; then
-            echo "Checking for glib-2.0.pc for arm..."
-            find /usr -name "glib-2.0.pc" | grep arm
-          fi
-          
-          # Set up PKG_CONFIG for cross-compilation
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            # Set env vars directly for this platform
-            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
-            echo "PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
-            
-            # Create a wrapper script as a backup approach
-            echo '#!/bin/bash
-            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
-            export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
-            export PKG_CONFIG_ALLOW_CROSS=1
-            exec pkg-config "$@"' | sudo tee /usr/local/bin/aarch64-linux-gnu-pkg-config
-            sudo chmod +x /usr/local/bin/aarch64-linux-gnu-pkg-config
-            echo "PKG_CONFIG=/usr/local/bin/aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
-          elif [[ "${{ matrix.arch }}" == "arm" ]]; then
-            # Set env vars directly for this platform
-            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
-            echo "PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
-            
-            # Create a wrapper script as a backup approach
-            echo '#!/bin/bash
-            export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
-            export PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
-            export PKG_CONFIG_ALLOW_CROSS=1
-            exec pkg-config "$@"' | sudo tee /usr/local/bin/arm-linux-gnueabihf-pkg-config
-            sudo chmod +x /usr/local/bin/arm-linux-gnueabihf-pkg-config
-            echo "PKG_CONFIG=/usr/local/bin/arm-linux-gnueabihf-pkg-config" >> $GITHUB_ENV
-          fi
-          
-          # Debug: Test pkg-config for glib-2.0
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            echo "Testing pkg-config for glib-2.0 for aarch64..."
-            /usr/local/bin/aarch64-linux-gnu-pkg-config --modversion glib-2.0 || echo "pkg-config test failed"
-          elif [[ "${{ matrix.arch }}" == "arm" ]]; then
-            echo "Testing pkg-config for glib-2.0 for arm..."
-            /usr/local/bin/arm-linux-gnueabihf-pkg-config --modversion glib-2.0 || echo "pkg-config test failed"
-          fi
-
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
@@ -363,20 +181,29 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli
 
-      - name: Build Tauri app
-        shell: bash
+      - name: Build Tauri app for GitHub release (release)
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           CARGO_BUILD_TARGET: ${{ steps.set-rust-target.outputs.RUST_TARGET }}
         run: |
-          cd src-tauri
-          echo "Building for target: ${{ steps.set-rust-target.outputs.RUST_TARGET }}"
-          echo "CARGO_BUILD_TARGET=${CARGO_BUILD_TARGET}"
+          # Debug output the target we are using
+          echo "Building with target: $CARGO_BUILD_TARGET"
           
-          # Use the target specified in CARGO_BUILD_TARGET
-          cargo tauri build --target $CARGO_BUILD_TARGET
-          cd ..
+          # Build the Tauri app
+          ./node_modules/.bin/tauri build --target $CARGO_BUILD_TARGET
+
+      - name: Build Tauri app (debug)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        env:
+          CARGO_BUILD_TARGET: ${{ steps.set-rust-target.outputs.RUST_TARGET }}
+        run: |
+          # Debug output the target we are using
+          echo "Building with target: $CARGO_BUILD_TARGET"
+          
+          # Build the Tauri app
+          ./node_modules/.bin/tauri build --target $CARGO_BUILD_TARGET
 
       - name: Prepare artifacts (Linux)
         if: matrix.os == 'ubuntu-latest'

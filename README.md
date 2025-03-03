@@ -16,7 +16,7 @@ A powerful desktop application and terminal interface for managing Visual Studio
 
 We provide platform-specific installation scripts that automatically download and install the latest release.
 
-> **Note:** ARM architecture (ARM64/aarch64) is fully supported. The installer scripts will detect your system architecture and download the appropriate version.
+> **Note:** ARM architecture (ARM64/aarch64) is fully supported on macOS and Windows. The installer scripts will detect your system architecture and download the appropriate version. Linux is currently supported only on x86_64 architecture.
 
 #### GUI Installation (Desktop Application)
 
@@ -67,14 +67,14 @@ You can download the latest binaries from the [Releases page](https://github.com
 Available packages:
 
 **GUI (Desktop Application):**
-- Windows: `.msi` installer or `.zip` archive
-- macOS: `.dmg` disk image
-- Linux: `.AppImage` or `.deb`/`.rpm` packages
+- Windows: `.msi` installer (x64 and ARM64)
+- macOS: `.dmg` disk image (x64 and ARM64)
+- Linux: `.AppImage` or `.deb`/`.rpm` packages (x64 only)
 
 **CLI (Terminal Interface):**
-- Windows: `.zip` archive containing the CLI executable
-- macOS: `.tar.gz` archive containing the CLI binary
-- Linux: `.tar.gz` archive containing the CLI binary
+- Windows: executable for x64 and ARM64
+- macOS: binary for x64 and ARM64
+- Linux: binary for x64 only
 
 #### Building from Source
 
