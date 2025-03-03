@@ -8,6 +8,7 @@ use crate::workspaces::error::WorkspaceError;
 /// Get the default VSCode profile path for the current platform
 pub fn get_default_profile_path() -> Result<String> {
     if let Some(base_dirs) = BaseDirs::new() {
+        #[allow(unused_variables)]
         let config_dir = base_dirs.config_dir();
 
         #[cfg(target_os = "macos")]
