@@ -34,15 +34,9 @@ case "$ARCH" in
     x86_64)
         ARCH_NAME="x64"
         ;;
-    aarch64|arm64)
-        ARCH_NAME="arm64"
-        ;;
-    armv7*|armhf)
-        ARCH_NAME="arm"
-        ;;
     *)
         echo -e "${RED}Unsupported architecture: $ARCH${NC}"
-        echo "Currently only x86_64, arm64, and armv7 are supported."
+        echo "Currently only x86_64 is supported for Linux."
         exit 1
         ;;
 esac
@@ -55,7 +49,7 @@ LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/release
 DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-gui-linux-$ARCH_NAME.AppImage[^\"]*" | cut -d '"' -f 4 | head -n 1)
 
 # If no AppImage, try .deb
-if [ -z "$DOWNLOAD_URL" ] && [ "$ARCH_NAME" != "arm" ]; then
+if [ -z "$DOWNLOAD_URL" ]; then
     DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-gui-linux-$ARCH_NAME.deb[^\"]*" | cut -d '"' -f 4 | head -n 1)
     USE_DEB=true
 fi

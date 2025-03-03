@@ -28,15 +28,9 @@ case "$ARCH" in
     x86_64)
         ARCH_NAME="amd64"
         ;;
-    aarch64|arm64)
-        ARCH_NAME="arm64"
-        ;;
-    armv7*|armhf)
-        ARCH_NAME="arm"
-        ;;
     *)
         echo -e "${RED}Unsupported architecture: $ARCH${NC}"
-        echo "Currently only x86_64, arm64, and armv7 are supported."
+        echo "Currently only x86_64 is supported for Linux."
         exit 1
         ;;
 esac
