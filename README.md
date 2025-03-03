@@ -88,8 +88,8 @@ Available packages:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/vhqtvn/vscode-workspace-editor.git
-cd vscode-workspace-editor
+git clone https://github.com/vhqtvn/vscode-workspaces-editor.git
+cd vscode-workspaces-editor
 ```
 
 2. Build the project:
