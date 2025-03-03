@@ -28,15 +28,28 @@ mkdir -p "$APP_DIR"
 mkdir -p "$DESKTOP_FILE_DIR"
 mkdir -p "$ICON_DIR"
 
+# Check for jq
+if ! command -v jq &> /dev/null; then
+    echo -e "${RED}Error: jq is required but not installed.${NC}"
+    echo "Please install jq first using your package manager:"
+    echo "  apt: sudo apt install jq"
+    echo "  yum: sudo yum install jq"
+    echo "  dnf: sudo dnf install jq"
+    exit 1
+fi
+
 # Determine system architecture
 ARCH=$(uname -m)
 case "$ARCH" in
     x86_64)
         ARCH_NAME="x64"
         ;;
+    aarch64)
+        ARCH_NAME="arm64"
+        ;;
     *)
         echo -e "${RED}Unsupported architecture: $ARCH${NC}"
-        echo "Currently only x86_64 is supported for Linux."
+        echo "Currently only x86_64 and aarch64 are supported for Linux."
         exit 1
         ;;
 esac
@@ -46,11 +59,11 @@ echo -e "${CYAN}Downloading the latest GUI release...${NC}"
 LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
 
 # Try to find an AppImage first
-DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-gui-linux-$ARCH_NAME.AppImage[^\"]*" | cut -d '"' -f 4 | head -n 1)
+DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | contains(\"vscode-workspaces-editor-gui-linux-$ARCH_NAME\") and contains(\".AppImage\")) | .browser_download_url")
 
 # If no AppImage, try .deb
 if [ -z "$DOWNLOAD_URL" ]; then
-    DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-gui-linux-$ARCH_NAME.deb[^\"]*" | cut -d '"' -f 4 | head -n 1)
+    DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | contains(\"vscode-workspaces-editor-gui-linux-$ARCH_NAME\") and contains(\".deb\")) | .browser_download_url")
     USE_DEB=true
 fi
 

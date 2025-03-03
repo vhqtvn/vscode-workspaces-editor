@@ -12,6 +12,15 @@ INSTALL_DIR="/Applications"
 echo -e "\033[36mVSCode Workspaces Editor GUI Installer for macOS\033[0m"
 echo "========================================"
 
+# Check for jq
+if ! command -v jq &> /dev/null; then
+    echo -e "\033[31mError: jq is required but not installed.\033[0m"
+    echo "Please install jq first using:"
+    echo "  brew install jq"
+    echo "Or download from: https://stedolan.github.io/jq/download/"
+    exit 1
+fi
+
 # Determine system architecture
 ARCH=$(uname -m)
 case "$ARCH" in
@@ -43,7 +52,7 @@ fi
 # Download the latest release
 echo -e "\033[36mDownloading the latest GUI release...\033[0m"
 LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
-DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-gui-macos-$ARCH_NAME\.dmg[^\"]*" | cut -d '"' -f 4 | head -n 1)
+DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | contains(\"vscode-workspaces-editor-gui-macos-$ARCH_NAME\") and contains(\".dmg\")) | .browser_download_url")
 
 if [ -z "$DOWNLOAD_URL" ]; then
     echo -e "\033[31mError: Could not find macOS DMG installer for $ARCH_NAME in the latest release.\033[0m"

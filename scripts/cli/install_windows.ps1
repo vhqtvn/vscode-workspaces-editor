@@ -32,7 +32,10 @@ try {
     Write-Host "Downloading the latest CLI release..." -ForegroundColor Cyan
     $ReleasesUri = "https://api.github.com/repos/$GitHubRepo/releases/latest"
     $LatestRelease = Invoke-RestMethod -Uri $ReleasesUri -Method Get
-    $Asset = $LatestRelease.assets | Where-Object { $_.name -like "*vscode-workspaces-editor-windows-$ArchName.exe" }
+    
+    # More precise asset selection
+    $AssetPattern = "vscode-workspaces-editor-windows-$ArchName"
+    $Asset = $LatestRelease.assets | Where-Object { $_.name -like "*$AssetPattern*.exe" } | Select-Object -First 1
     
     if (-not $Asset) {
         Write-Host "No Windows CLI executable found for $ArchName in the latest release. Please check the repository or try manual installation." -ForegroundColor Red

@@ -22,15 +22,28 @@ echo "========================================="
 echo -e "${CYAN}Creating directories...${NC}"
 mkdir -p "$INSTALL_DIR"
 
+# Check for jq
+if ! command -v jq &> /dev/null; then
+    echo -e "${RED}Error: jq is required but not installed.${NC}"
+    echo "Please install jq first using your package manager:"
+    echo "  apt: sudo apt install jq"
+    echo "  yum: sudo yum install jq"
+    echo "  dnf: sudo dnf install jq"
+    exit 1
+fi
+
 # Determine system architecture
 ARCH=$(uname -m)
 case "$ARCH" in
     x86_64)
         ARCH_NAME="amd64"
         ;;
+    aarch64)
+        ARCH_NAME="arm64"
+        ;;
     *)
         echo -e "${RED}Unsupported architecture: $ARCH${NC}"
-        echo "Currently only x86_64 is supported for Linux."
+        echo "Currently only x86_64 and aarch64 are supported for Linux."
         exit 1
         ;;
 esac
@@ -38,7 +51,7 @@ esac
 # Download the latest release
 echo -e "${CYAN}Downloading the latest CLI release...${NC}"
 LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
-DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | grep -o "browser_download_url.*vscode-workspaces-editor-linux-$ARCH_NAME[^\"]*" | cut -d '"' -f 4 | head -n 1)
+DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | contains(\"vscode-workspaces-editor-linux-$ARCH_NAME\")) | .browser_download_url")
 
 if [ -z "$DOWNLOAD_URL" ]; then
     echo -e "${RED}Error: Could not find Linux CLI binary for $ARCH_NAME in the latest release.${NC}"
