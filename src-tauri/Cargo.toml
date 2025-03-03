@@ -1,0 +1,24 @@
+[package]
+name = "vscode-workspaces-editor-gui"
+version = "0.1.0"
+description = "VSCode Workspaces Editor - Tauri interface"
+authors = [""]
+license = ""
+repository = ""
+default-run = "vscode-workspaces-editor-gui"
+edition = "2021"
+rust-version = "1.60"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "2.0.0", features = [] }
+chrono = "0.4"
+dirs = "5.0"
+vscode-workspaces-editor = { path = ".." }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"] 

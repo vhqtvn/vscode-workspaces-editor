@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/tooling/schema.json",
+  "productName": "vscode-workspaces-editor-gui",
+  "version": "0.1.0",
+  "identifier": "vn.vhn.vscode-workspaces-editor",
+  "build": {
+    "beforeDevCommand": "cd ../src-ui && pnpm dev",
+    "beforeBuildCommand": "cd src-ui; pnpm build",
+    "frontendDist": "../src-ui/dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "bundle": {
+    "active": true,
+    "category": "DeveloperTool",
+    "copyright": "",
+    "externalBin": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "longDescription": "A VSCode workspaces editor that supports both desktop and terminal interfaces",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "resources": [],
+    "shortDescription": "VSCode workspaces editor",
+    "targets": "all"
+  },
+  "app": {
+    "security": {
+      "capabilities": ["default"],
+      "csp": null
+    },
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 600,
+        "resizable": true,
+        "title": "VSCode Workspaces Editor",
+        "width": 800,
+        "label": "main"
+      }
+    ]
+  }  
+} 
