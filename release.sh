@@ -16,7 +16,7 @@ if ! echo "$NEW_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
 fi
 
 # Update version in Cargo.toml
-sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+sed -i "s/^version = \".*\" #app-version/version = \"$NEW_VERSION\" #app-version/" Cargo.toml
 
 # Stage the changes
 git add Cargo.toml
