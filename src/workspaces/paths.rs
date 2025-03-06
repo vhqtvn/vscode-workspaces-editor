@@ -2,6 +2,7 @@ use anyhow::Result;
 use directories::BaseDirs;
 use home::home_dir;
 use log::debug;
+use urlencoding;
 
 use crate::workspaces::error::WorkspaceError;
 
@@ -49,69 +50,25 @@ pub fn expand_tilde(path: &str) -> Result<String> {
 /// Normalize a path or URI to a consistent format
 pub fn normalize_path(uri_or_path: &str) -> String {
     debug!("Normalizing path: {}", uri_or_path);
-    // Return path as-is without any normalization
-    uri_or_path.to_string()
+    
+    // First decode any URL encoding
+    let decoded = match urlencoding::decode(uri_or_path) {
+        Ok(decoded) => decoded.into_owned(),
+        Err(_) => uri_or_path.to_string(),
+    };
+    
+    // Then handle file:// prefix consistently
+    if decoded.starts_with("file://") {
+        decoded.replace("file://", "")
+    } else {
+        decoded
+    }
 }
 
 /// Generate variations of a path to try for matching
 pub fn generate_path_variations(path: &str) -> Vec<String> {
     let mut variations = Vec::new();
-
-    // Original path
     variations.push(path.to_string());
-
-    // Normalized path
-    let normalized = normalize_path(path);
-    if !variations.contains(&normalized) {
-        variations.push(normalized.clone());
-    }
-
-    // With and without file:// prefix
-    if path.starts_with("file://") {
-        let without_prefix = path.replace("file://", "");
-        if !variations.contains(&without_prefix) {
-            variations.push(without_prefix);
-        }
-    } else {
-        let with_prefix = format!("file://{}", path);
-        if !variations.contains(&with_prefix) {
-            variations.push(with_prefix);
-        }
-    }
-
-    // Try both forward and backslash variations
-    let with_forward_slashes = path.replace("\\", "/");
-    if !variations.contains(&with_forward_slashes) {
-        variations.push(with_forward_slashes);
-    }
-
-    let with_back_slashes = path.replace("/", "\\");
-    if !variations.contains(&with_back_slashes) {
-        variations.push(with_back_slashes);
-    }
-
-    // Try without drive letter on Windows (if present)
-    if path.chars().nth(1) == Some(':') {
-        let without_drive = &path[2..];
-        if !variations.contains(&without_drive.to_string()) {
-            variations.push(without_drive.to_string());
-        }
-    }
-
-    // Remove trailing slashes
-    let without_trailing_slash = path
-        .trim_end_matches('/')
-        .trim_end_matches('\\')
-        .to_string();
-    if !variations.contains(&without_trailing_slash) {
-        variations.push(without_trailing_slash);
-    }
-
-    debug!(
-        "Generated {} path variations for {}",
-        variations.len(),
-        path
-    );
     variations
 }
 

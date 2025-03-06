@@ -309,13 +309,13 @@ fn process_workspace_details(
 ) -> bool {
     debug!("Processing workspace path: {}", workspace_path);
     
-    // Use the path as-is without normalization
-    let path_to_use = workspace_path.to_string();
-    debug!("Using path: {}", path_to_use);
+    // Normalize the path for matching
+    let normalized_path = normalize_path(workspace_path);
+    debug!("Normalized path: {}", normalized_path);
     
-    // First try to find an exact match
+    // First try to find an exact match using normalized path
     let mut found_idx = None;
-    if let Some(&idx) = workspace_map.get(&path_to_use) {
+    if let Some(&idx) = workspace_map.get(&normalized_path) {
         debug!("Found exact path match at index {}", idx);
         found_idx = Some(idx);
     }
@@ -346,7 +346,7 @@ fn process_workspace_details(
         true
     } else {
         // If no matching workspace found in storage, create a new one from the database
-        debug!("Creating new workspace from database: {}", path_to_use);
+        debug!("Creating new workspace from database: {}", normalized_path);
         
         // Generate a unique ID for the workspace
         let id = format!("db-{}", Uuid::new_v4());
@@ -355,7 +355,7 @@ fn process_workspace_details(
         let workspace = Workspace {
             id,
             name: if workspace_name.is_empty() { None } else { Some(workspace_name.to_string()) },
-            path: path_to_use.clone(),
+            path: workspace_path.to_string(), // Keep original path for display
             last_used: workspace_last_used,
             storage_path: None,
             sources: vec![db_source],
@@ -365,9 +365,9 @@ fn process_workspace_details(
         // Add the new workspace to the list
         workspaces.push(workspace);
         
-        // Update the map with the new index
+        // Update the map with the new index using normalized path
         let new_idx = workspaces.len() - 1;
-        workspace_map.insert(path_to_use, new_idx);
+        workspace_map.insert(normalized_path, new_idx);
         
         true
     }
