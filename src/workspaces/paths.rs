@@ -49,41 +49,8 @@ pub fn expand_tilde(path: &str) -> Result<String> {
 /// Normalize a path or URI to a consistent format
 pub fn normalize_path(uri_or_path: &str) -> String {
     debug!("Normalizing path: {}", uri_or_path);
-
-    // For remote paths, keep the full URI intact
-    if uri_or_path.starts_with("vscode-remote://") {
-        return uri_or_path.to_string();
-    }
-
-    // Handle common URI prefixes
-    let path = if uri_or_path.starts_with("file://") {
-        uri_or_path.replace("file://", "")
-    } else {
-        uri_or_path.to_string()
-    };
-
-    // Decode URL-encoded characters
-    let decoded_path = match urlencoding::decode(&path) {
-        Ok(decoded) => decoded.into_owned(),
-        Err(_) => path.clone(),
-    };
-
-    // Remove any trailing slashes
-    let clean_path = decoded_path
-        .trim_end_matches('/')
-        .trim_end_matches('\\')
-        .to_string();
-
-    // Normalize path separators to the platform native
-    #[cfg(windows)]
-    let normalized_path = clean_path.replace("/", "\\");
-
-    #[cfg(not(windows))]
-    let normalized_path = clean_path.replace("\\", "/");
-
-    debug!("Normalized to: {}", normalized_path);
-
-    normalized_path
+    // Return path as-is without any normalization
+    uri_or_path.to_string()
 }
 
 /// Generate variations of a path to try for matching
