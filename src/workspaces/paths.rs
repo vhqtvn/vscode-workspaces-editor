@@ -50,22 +50,14 @@ pub fn expand_tilde(path: &str) -> Result<String> {
 pub fn normalize_path(uri_or_path: &str) -> String {
     debug!("Normalizing path: {}", uri_or_path);
 
+    // For remote paths, keep the full URI intact
+    if uri_or_path.starts_with("vscode-remote://") {
+        return uri_or_path.to_string();
+    }
+
     // Handle common URI prefixes
     let path = if uri_or_path.starts_with("file://") {
         uri_or_path.replace("file://", "")
-    } else if uri_or_path.starts_with("vscode-remote://") {
-        // For remote paths like vscode-remote://ssh-remote+[hostname]/path
-        let parts: Vec<&str> = uri_or_path.splitn(2, "//").collect();
-        if parts.len() > 1 {
-            let remote_path_parts: Vec<&str> = parts[1].splitn(2, "/").collect();
-            if remote_path_parts.len() > 1 {
-                remote_path_parts[1].to_string()
-            } else {
-                uri_or_path.to_string()
-            }
-        } else {
-            uri_or_path.to_string()
-        }
     } else {
         uri_or_path.to_string()
     };

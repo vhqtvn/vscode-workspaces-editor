@@ -313,7 +313,12 @@ fn process_workspace_details(
     let normalized_path = normalize_path(workspace_path);
     debug!("Normalized path: {}", normalized_path);
     
-    let normalized_workspace_path = normalize_path(&normalized_path);
+    // For remote paths, we need to match the full URI
+    let normalized_workspace_path = if workspace_path.starts_with("vscode-remote://") {
+        normalized_path.clone()
+    } else {
+        normalize_path(&normalized_path)
+    };
     let path_variations = generate_path_variations(&normalized_workspace_path);
     
     // First try to find an exact match
@@ -330,8 +335,6 @@ fn process_workspace_details(
                 break;
             }
         }
-        
-        // Note: Removed suffix matching as per requirements
     }
     
     // Create a database source with the identifier
