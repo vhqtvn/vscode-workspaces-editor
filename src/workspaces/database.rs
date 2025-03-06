@@ -313,11 +313,32 @@ fn process_workspace_details(
     let normalized_path = normalize_path(workspace_path);
     debug!("Normalized path: {}", normalized_path);
     
+    // Debug: Print current workspace map
+    debug!("Current workspace map keys:");
+    for key in workspace_map.keys() {
+        debug!("  Map key: {}", key);
+    }
+    
     // First try to find an exact match using normalized path
     let mut found_idx = None;
     if let Some(&idx) = workspace_map.get(&normalized_path) {
-        debug!("Found exact path match at index {}", idx);
+        debug!("Found exact path match at index {} for path {}", idx, normalized_path);
         found_idx = Some(idx);
+    } else {
+        debug!("No match found for normalized path: {}", normalized_path);
+        // Also check if there's a workspace with this path already
+        for (i, workspace) in workspaces.iter().enumerate() {
+            let existing_normalized = normalize_path(&workspace.path);
+            debug!("Comparing with existing workspace {} - original: {}, normalized: {}", 
+                  i, workspace.path, existing_normalized);
+            if existing_normalized == normalized_path {
+                debug!("Found matching workspace at index {}", i);
+                found_idx = Some(i);
+                // Update the map with the normalized path
+                workspace_map.insert(normalized_path.clone(), i);
+                break;
+            }
+        }
     }
     
     // Create a database source with the identifier
@@ -326,6 +347,9 @@ fn process_workspace_details(
     if let Some(idx) = found_idx {
         debug!("Updating workspace at index {}", idx);
         let workspace = &mut workspaces[idx];
+        
+        debug!("Existing workspace - path: {}, normalized: {}", 
+              workspace.path, normalize_path(&workspace.path));
         
         // Update name if provided and workspace doesn't already have one
         if !workspace_name.is_empty() && workspace.name.is_none() {

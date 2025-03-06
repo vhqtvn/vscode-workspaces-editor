@@ -57,19 +57,30 @@ pub fn normalize_path(uri_or_path: &str) -> String {
         Err(_) => uri_or_path.to_string(),
     };
     
-    // Then handle file:// prefix consistently
-    if decoded.starts_with("file://") {
+    // Handle file:// and vscode-remote:// prefixes
+    let path = if decoded.starts_with("vscode-remote://") {
+        // Keep remote paths as-is to maintain uniqueness
+        decoded
+    } else if decoded.starts_with("file://") {
+        // Remove file:// prefix and normalize
         decoded.replace("file://", "")
     } else {
         decoded
-    }
+    };
+    
+    // Remove any trailing slashes
+    let clean_path = path.trim_end_matches('/').trim_end_matches('\\');
+    
+    // Normalize path separators to forward slashes
+    let normalized = clean_path.replace('\\', "/");
+    
+    debug!("Normalized result: {}", normalized);
+    normalized
 }
 
 /// Generate variations of a path to try for matching
 pub fn generate_path_variations(path: &str) -> Vec<String> {
-    let mut variations = Vec::new();
-    variations.push(path.to_string());
-    variations
+    vec![path.to_string()]
 }
 
 /// Check if we're running inside WSL
