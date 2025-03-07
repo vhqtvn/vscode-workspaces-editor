@@ -2,7 +2,6 @@ use anyhow::Result;
 use directories::BaseDirs;
 use home::home_dir;
 use log::debug;
-use urlencoding;
 
 use crate::workspaces::error::WorkspaceError;
 
@@ -76,11 +75,6 @@ pub fn normalize_path(uri_or_path: &str) -> String {
     
     debug!("Normalized result: {}", normalized);
     normalized
-}
-
-/// Generate variations of a path to try for matching
-pub fn generate_path_variations(path: &str) -> Vec<String> {
-    vec![path.to_string()]
 }
 
 /// Check if we're running inside WSL

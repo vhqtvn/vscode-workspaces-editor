@@ -6,7 +6,7 @@ use std::path::Path;
 use uuid::Uuid;
 
 use crate::workspaces::models::{Workspace, WorkspaceSource};
-use crate::workspaces::paths::{generate_path_variations, normalize_path};
+use crate::workspaces::paths::normalize_path;
 
 /// Get workspace names and last used times from state database
 pub fn get_workspace_metadata(profile_path: &str, workspaces: &mut Vec<Workspace>) -> Result<()> {
