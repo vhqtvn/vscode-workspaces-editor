@@ -30,7 +30,14 @@ fn output_text(workspaces: &[Workspace]) -> Result<()> {
     for (i, workspace) in workspaces.iter().enumerate() {
         writeln!(handle, "{:3}. ID: {}", i + 1, workspace.id)?;
         writeln!(handle, "     Name: {}", workspace.name.as_deref().unwrap_or("N/A"))?;
-        writeln!(handle, "     Path: {}", workspace.path)?;
+        
+        // Display parsed path if available, otherwise original path
+        let display_path = if let Some(parsed_info) = &workspace.parsed_info {
+            parsed_info.path.clone()
+        } else {
+            workspace.path.clone()
+        };
+        writeln!(handle, "     Path: {}", display_path)?;
         
         // Display parsed data
         if let Some(parsed_info) = &workspace.parsed_info {
@@ -114,10 +121,17 @@ fn output_text(workspaces: &[Workspace]) -> Result<()> {
 fn output_json(workspaces: &[Workspace]) -> Result<()> {
     // Create a more detailed representation with original path explicitly included
     let workspace_details: Vec<serde_json::Value> = workspaces.iter().map(|workspace| {
+        // Determine the path to display - use parsed path if available, otherwise original path
+        let display_path = if let Some(parsed_info) = &workspace.parsed_info {
+            parsed_info.path.clone()
+        } else {
+            workspace.path.clone()
+        };
+        
         let mut json_workspace = serde_json::json!({
             "id": workspace.id,
             "name": workspace.name,
-            "path": workspace.path,
+            "path": display_path,
             "last_used": workspace.last_used,
             "last_used_human": if workspace.last_used > 0 {
                 chrono::DateTime::from_timestamp(workspace.last_used / 1000, 0)

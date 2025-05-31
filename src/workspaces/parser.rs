@@ -98,7 +98,15 @@ pub fn parse_workspace_path(path: &str) -> Result<WorkspacePathInfo> {
     };
         
     info.remote_authority = Some(remote_authority.clone());
-    info.path = remote_parts[1].to_string();
+    
+    // Extract the path and ensure it starts with "/" for absolute paths
+    let extracted_path = remote_parts[1].to_string();
+    info.path = if extracted_path.starts_with('/') {
+        extracted_path
+    } else {
+        format!("/{}", extracted_path)
+    };
+    
     info.tags.push("remote".to_string());
     
     info.workspace_type = WorkspaceType::Workspace;
