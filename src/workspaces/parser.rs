@@ -300,28 +300,67 @@ fn parse_json_remote_config(json_config: &str) -> Result<RemoteConfig> {
 
 /// Parse SSH remote string and populate WorkspacePathInfo
 fn parse_ssh_remote_string(remote_str: &str, info: &mut WorkspacePathInfo) {
-    info.remote_host = Some(remote_str.to_string());
-    
-    // Handle user@host or user@host:port format
+    // Handle user@host or user@host:port or user@host:/path or user@host:port:/path format
     if let Some(at_pos) = remote_str.find('@') {
         let user = &remote_str[..at_pos];
-        let host_port = &remote_str[(at_pos + 1)..];
+        let host_part = &remote_str[(at_pos + 1)..];
         
         info.remote_user = Some(user.to_string());
         
-        // Check if port is specified (host:port)
-        if let Some(colon_pos) = host_port.rfind(':') {
-            let host = &host_port[..colon_pos];
-            let port_str = &host_port[(colon_pos + 1)..];
-            
-            if let Ok(port) = port_str.parse::<u16>() {
-                info.remote_port = Some(port);
-            }
+        // Check if there's a colon after the host
+        if let Some(colon_pos) = host_part.find(':') {
+            let host = &host_part[..colon_pos];
+            let after_colon = &host_part[(colon_pos + 1)..];
             
             info.remote_host = Some(host.to_string());
+            
+            // Try to determine if what follows the colon is a port, path, or port:path
+            if let Some(second_colon_pos) = after_colon.find(':') {
+                // Format: user@host:port:/path
+                let port_str = &after_colon[..second_colon_pos];
+                let path_part = &after_colon[(second_colon_pos + 1)..];
+                
+                if let Ok(port) = port_str.parse::<u16>() {
+                    info.remote_port = Some(port);
+                }
+                
+                if !path_part.is_empty() {
+                    info.path = path_part.to_string();
+                }
+            } else if after_colon.parse::<u16>().is_ok() {
+                // Format: user@host:port (no path)
+                info.remote_port = Some(after_colon.parse::<u16>().unwrap());
+            } else if after_colon.starts_with('/') || after_colon.starts_with('~') {
+                // Format: user@host:/path (no port)
+                info.path = after_colon.to_string();
+            } else {
+                // Could be either, try port first, then assume it's a relative path
+                if let Ok(port) = after_colon.parse::<u16>() {
+                    info.remote_port = Some(port);
+                } else {
+                    info.path = after_colon.to_string();
+                }
+            }
         } else {
-            // Just host without port
-            info.remote_host = Some(host_port.to_string());
+            // Just host without port or path
+            info.remote_host = Some(host_part.to_string());
+        }
+    } else {
+        // No @ symbol, might be just host:path or host:port
+        if let Some(colon_pos) = remote_str.find(':') {
+            let host = &remote_str[..colon_pos];
+            let after_colon = &remote_str[(colon_pos + 1)..];
+            
+            info.remote_host = Some(host.to_string());
+            
+            if let Ok(port) = after_colon.parse::<u16>() {
+                info.remote_port = Some(port);
+            } else {
+                info.path = after_colon.to_string();
+            }
+        } else {
+            // Just host without port or path
+            info.remote_host = Some(remote_str.to_string());
         }
     }
 }
@@ -395,4 +434,70 @@ mod tests {
         let result = decode_hex_if_needed(hex_input).unwrap();
         assert_eq!(result, "{\"host\":\"example.com\"}");
     }
-} 
+
+    #[test]
+    fn test_parse_ssh_remote_string() {
+        // Test user@host format
+        let mut info = WorkspacePathInfo {
+            original_path: "test".to_string(),
+            workspace_type: WorkspaceType::Workspace,
+            remote_authority: None,
+            remote_host: None,
+            remote_user: None,
+            remote_port: None,
+            path: "original/path".to_string(),
+            container_path: None,
+            label: None,
+            tags: Vec::new(),
+        };
+        
+        parse_ssh_remote_string("user@host", &mut info);
+        assert_eq!(info.remote_user, Some("user".to_string()));
+        assert_eq!(info.remote_host, Some("host".to_string()));
+        assert!(info.remote_port.is_none());
+        assert_eq!(info.path, "original/path"); // Should remain unchanged
+        
+        // Test user@host:port format
+        let mut info2 = info.clone();
+        parse_ssh_remote_string("user@host:2222", &mut info2);
+        assert_eq!(info2.remote_user, Some("user".to_string()));
+        assert_eq!(info2.remote_host, Some("host".to_string()));
+        assert_eq!(info2.remote_port, Some(2222));
+        assert_eq!(info2.path, "original/path"); // Should remain unchanged
+        
+        // Test user@host:/path format
+        let mut info3 = info.clone();
+        parse_ssh_remote_string("user@host:/home/user/project", &mut info3);
+        assert_eq!(info3.remote_user, Some("user".to_string()));
+        assert_eq!(info3.remote_host, Some("host".to_string()));
+        assert!(info3.remote_port.is_none());
+        assert_eq!(info3.path, "/home/user/project"); // Should be updated
+        
+        // Test user@host:port:/path format
+        let mut info4 = info.clone();
+        parse_ssh_remote_string("user@host:2222:/home/user/project", &mut info4);
+        assert_eq!(info4.remote_user, Some("user".to_string()));
+        assert_eq!(info4.remote_host, Some("host".to_string()));
+        assert_eq!(info4.remote_port, Some(2222));
+        assert_eq!(info4.path, "/home/user/project"); // Should be updated
+        
+        // Test host:path format (no user)
+        let mut info5 = WorkspacePathInfo {
+            original_path: "test".to_string(),
+            workspace_type: WorkspaceType::Workspace,
+            remote_authority: None,
+            remote_host: None,
+            remote_user: None,
+            remote_port: None,
+            path: "original/path".to_string(),
+            container_path: None,
+            label: None,
+            tags: Vec::new(),
+        };
+        parse_ssh_remote_string("host:/home/user/project", &mut info5);
+        assert!(info5.remote_user.is_none());
+        assert_eq!(info5.remote_host, Some("host".to_string()));
+        assert!(info5.remote_port.is_none());
+        assert_eq!(info5.path, "/home/user/project"); // Should be updated
+    }
+}
