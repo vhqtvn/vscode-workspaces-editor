@@ -56,24 +56,60 @@ esac
 
 # Download the latest release
 echo -e "${CYAN}Downloading the latest GUI release...${NC}"
+echo "Detected architecture: $ARCH ($ARCH_NAME)"
 LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest")
 
 # Try to find an AppImage first
+echo "Searching for: vscode-workspaces-editor-gui-linux-$ARCH_NAME.AppImage"
 DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | contains(\"vscode-workspaces-editor-gui-linux-$ARCH_NAME\") and contains(\".AppImage\")) | .browser_download_url")
 
 # If no AppImage, try .deb
 if [ -z "$DOWNLOAD_URL" ]; then
+    echo "No AppImage found, searching for: vscode-workspaces-editor-gui-linux-$ARCH_NAME.deb"
     DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | contains(\"vscode-workspaces-editor-gui-linux-$ARCH_NAME\") and contains(\".deb\")) | .browser_download_url")
     USE_DEB=true
 fi
 
+# If no .deb, try .rpm
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo "No .deb found, searching for: vscode-workspaces-editor-gui-linux-$ARCH_NAME.rpm"
+    DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | contains(\"vscode-workspaces-editor-gui-linux-$ARCH_NAME\") and contains(\".rpm\")) | .browser_download_url")
+    USE_RPM=true
+fi
+
 if [ -z "$DOWNLOAD_URL" ]; then
     echo -e "${RED}Error: Could not find Linux GUI package for $ARCH_NAME in the latest release.${NC}"
+    echo ""
+    echo "Available assets in the latest release:"
+    echo "$LATEST_RELEASE_INFO" | jq -r ".assets[].name"
+    echo ""
     echo "Please check the repository or try manual installation."
     exit 1
 fi
 
-if [ "$USE_DEB" = true ]; then
+if [ "$USE_RPM" = true ]; then
+    # Handle .rpm installation
+    TEMP_RPM="/tmp/vscode-workspaces-editor-gui.rpm"
+    echo -e "${CYAN}Downloading from: $DOWNLOAD_URL${NC}"
+    curl -L "$DOWNLOAD_URL" -o "$TEMP_RPM"
+    
+    # Install .rpm
+    echo -e "${CYAN}Installing .rpm package...${NC}"
+    if command -v dnf &> /dev/null; then
+        sudo dnf install -y "$TEMP_RPM"
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y "$TEMP_RPM"
+    elif command -v zypper &> /dev/null; then
+        sudo zypper install -y "$TEMP_RPM"
+    else
+        echo -e "${RED}Error: Neither dnf, yum, nor zypper found. Cannot install .rpm package.${NC}"
+        echo "Please install manually from $TEMP_RPM"
+        exit 1
+    fi
+    
+    # Clean up
+    rm -f "$TEMP_RPM"
+elif [ "$USE_DEB" = true ]; then
     # Handle .deb installation
     TEMP_DEB="/tmp/vscode-workspaces-editor-gui.deb"
     echo -e "${CYAN}Downloading from: $DOWNLOAD_URL${NC}"
