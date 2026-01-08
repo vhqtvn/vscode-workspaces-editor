@@ -103,10 +103,12 @@ fn output_text(workspaces: &[Workspace]) -> Result<()> {
         } else {
             for source in &workspace.sources {
                 match source {
-                    WorkspaceSource::Storage(path) => 
+                    WorkspaceSource::Storage(path) =>
                         writeln!(handle, "       Storage: {}", path)?,
-                    WorkspaceSource::Database(key) => 
+                    WorkspaceSource::Database(key) =>
                         writeln!(handle, "       Database: {}", key)?,
+                    WorkspaceSource::Zed(channel) =>
+                        writeln!(handle, "       Zed({})", channel)?,
                 }
             }
         }

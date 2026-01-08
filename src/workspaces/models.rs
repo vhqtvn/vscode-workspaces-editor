@@ -20,6 +20,7 @@ pub struct Workspace {
 pub enum WorkspaceSource {
     Storage(String),     // From workspace.json file with path
     Database(String),    // From state.vscdb with entry key
+    Zed(String),         // From Zed's db.sqlite with channel name
 }
 
 impl Default for WorkspaceSource {
@@ -37,6 +38,7 @@ where
         match source {
             WorkspaceSource::Storage(path) => format!("Storage({})", path),
             WorkspaceSource::Database(key) => format!("Database({})", key),
+            WorkspaceSource::Zed(channel) => format!("Zed({})", channel),
         }
     }).collect();
     

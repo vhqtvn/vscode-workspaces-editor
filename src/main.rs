@@ -178,10 +178,12 @@ async fn main() -> Result<()> {
                     println!("\nSources:");
                     for source in &workspace.sources {
                         match source {
-                            workspaces::WorkspaceSource::Storage(path) => 
+                            workspaces::WorkspaceSource::Storage(path) =>
                                 println!("Storage: {}", path),
-                            workspaces::WorkspaceSource::Database(key) => 
+                            workspaces::WorkspaceSource::Database(key) =>
                                 println!("Database: {}", key),
+                            workspaces::WorkspaceSource::Zed(channel) =>
+                                println!("Zed({})", channel),
                         }
                     }
                 } else {

@@ -4,6 +4,7 @@ use home::home_dir;
 use log::debug;
 
 use crate::workspaces::error::WorkspaceError;
+use crate::workspaces::zed::ZED_PROFILE_NAME;
 
 /// Get the default VSCode profile path for the current platform
 pub fn get_default_profile_path() -> Result<String> {
@@ -88,6 +89,13 @@ fn is_wsl() -> bool {
 
 /// Get all possible known VSCode configuration paths for the current system
 pub fn get_known_vscode_paths() -> Vec<String> {
+    let code_compatible_programs = vec![
+        "Code",
+        "Code - Insiders",
+        "Cursor",
+        "Antigravity",
+        "Kiro",
+    ];
     let mut paths = Vec::new();
 
     // Try getting the default profile path
@@ -99,32 +107,16 @@ pub fn get_known_vscode_paths() -> Vec<String> {
     if let Some(home) = home_dir() {
         // Common Linux/Unix paths
         paths.push(home.join(".vscode").to_string_lossy().to_string());
-        paths.push(home.join(".config/Code").to_string_lossy().to_string());
-        paths.push(
-            home.join(".config/Code - OSS")
-                .to_string_lossy()
-                .to_string(),
-        );
-        paths.push(home.join(".config/Cursor").to_string_lossy().to_string());
+        paths.extend(code_compatible_programs.iter().map(
+            |p| home.join(".config").join(p).to_string_lossy().to_string()
+        ));
 
         // MacOS paths
         #[cfg(target_os = "macos")]
         {
-            paths.push(
-                home.join("Library/Application Support/Code")
-                    .to_string_lossy()
-                    .to_string(),
-            );
-            paths.push(
-                home.join("Library/Application Support/Code - Insiders")
-                    .to_string_lossy()
-                    .to_string(),
-            );
-            paths.push(
-                home.join("Library/Application Support/Cursor")
-                    .to_string_lossy()
-                    .to_string(),
-            );
+            paths.extend(code_compatible_programs.iter().map(
+                |p| home.join("Library/Application Support").join(p).to_string_lossy().to_string()
+            ));
         }
 
         // Windows paths
@@ -132,14 +124,9 @@ pub fn get_known_vscode_paths() -> Vec<String> {
         {
             if let Some(base_dirs) = BaseDirs::new() {
                 let data_dir = base_dirs.data_dir();
-                paths.push(data_dir.join("Code").to_string_lossy().to_string());
-                paths.push(
-                    data_dir
-                        .join("Code - Insiders")
-                        .to_string_lossy()
-                        .to_string(),
-                );
-                paths.push(data_dir.join("Cursor").to_string_lossy().to_string());
+                paths.extend(code_compatible_programs.iter().map(
+                    |p| data_dir.join(p).to_string_lossy().to_string()
+                ));
             }
         }
 
@@ -151,28 +138,14 @@ pub fn get_known_vscode_paths() -> Vec<String> {
                     if let Ok(path) = entry.path().canonicalize() {
                         if let Ok(metadata) = path.metadata() {
                             if metadata.is_dir() {
-                                // Add VSCode paths for each Windows user
-                                paths.push(
-                                    path.join("AppData/Roaming/Code")
-                                        .to_string_lossy()
-                                        .to_string(),
-                                );
-                                paths.push(
-                                    path.join("AppData/Roaming/Code - Insiders")
-                                        .to_string_lossy()
-                                        .to_string(),
-                                );
-                                paths.push(
-                                    path.join("AppData/Local/Programs/Microsoft VS Code")
-                                        .to_string_lossy()
-                                        .to_string(),
-                                );
-                                paths.push(
-                                    path.join("AppData/Local/Programs/Cursor")
-                                        .to_string_lossy()
-                                        .to_string(),
-                                );
                                 paths.push(path.join(".vscode").to_string_lossy().to_string());
+                                paths.extend(
+                                    code_compatible_programs.iter().map(
+                                        |p| path.join("AppData/Roaming").join(p)
+                                            .to_string_lossy()
+                                            .to_string()
+                                    )
+                                );
                             }
                         }
                     }
@@ -193,6 +166,9 @@ pub fn get_known_vscode_paths() -> Vec<String> {
         .into_iter()
         .filter(|p| std::path::Path::new(p).is_dir())
         .collect::<Vec<_>>();
+
+    // Add fake profiles that don't correspond to actual directories
+    paths.push(ZED_PROFILE_NAME.to_string());
 
     debug!("Found {} known VSCode paths", paths.len());
     paths

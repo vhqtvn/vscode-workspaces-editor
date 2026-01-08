@@ -6,6 +6,7 @@ mod database;
 mod paths;
 mod utils;
 pub mod parser;
+mod zed;
 
 // Public exports
 pub use models::Workspace;
@@ -33,6 +34,12 @@ mod api {
     pub fn get_workspaces(profile_path: &str) -> Result<Vec<Workspace>> {
         info!("Getting workspaces from: {}", profile_path);
         
+        // Handle the "::zed" fake profile
+        if profile_path == crate::workspaces::zed::ZED_PROFILE_NAME {
+            info!("Getting workspaces from Zed profile");
+            return crate::workspaces::zed::get_zed_workspaces();
+        }
+        
         // Get workspaces from storage
         let mut workspaces = get_workspaces_from_storage(profile_path)?;
         
@@ -52,7 +59,7 @@ mod api {
         // Sort by last used time (descending)
         workspaces.sort_by(|a, b| b.last_used.cmp(&a.last_used));
         
-        info!("Found {} workspaces in profile", workspaces.len());
+        info!("Found {} total workspaces", workspaces.len());
         Ok(workspaces)
     }
 
@@ -117,11 +124,11 @@ mod api {
                         // Parse the source to determine which database to use
                         if let Some((db_path, _)) = parse_db_source(&profile_path, db_source) {
                             if let Err(e) = delete_database_workspace(&db_path, &workspace.path) {
-                                warn!("Failed to delete workspace {} from database {}: {}", 
+                                warn!("Failed to delete workspace {} from database {}: {}",
                                       workspace.path, db_path, e);
                                 success = false;
                             } else {
-                                info!("Successfully removed workspace {} from database {}", 
+                                info!("Successfully removed workspace {} from database {}",
                                       workspace.path, db_path);
                                 deleted_count += 1;
                             }
@@ -129,6 +136,11 @@ mod api {
                             warn!("Could not determine database path from source: {}", db_source);
                             success = false;
                         }
+                    },
+                    WorkspaceSource::Zed(channel) => {
+                        // Zed workspace deletion is not yet supported
+                        warn!("Deletion of Zed workspaces is not yet supported (channel: {})", channel);
+                        success = false;
                     }
                 }
             }
