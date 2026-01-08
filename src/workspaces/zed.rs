@@ -128,10 +128,13 @@ fn get_workspaces_from_db(db_path: &PathBuf, channel: &str) -> Result<Vec<Worksp
         let (workspace_id, paths_opt, _remote_connection_id, timestamp_str,
              _remote_id, remote_kind, remote_host, remote_port, remote_user) = row?;
         
-        // Parse timestamp
-        let timestamp = match chrono::DateTime::parse_from_rfc3339(&timestamp_str) {
-            Ok(dt) => dt.timestamp_millis(),
-            Err(_) => 0, // Default to 0 if parsing fails
+        // Parse timestamp - Zed stores timestamps in "YYYY-MM-DD HH:MM:SS" format
+        let timestamp = match chrono::NaiveDateTime::parse_from_str(&timestamp_str, "%Y-%m-%d %H:%M:%S") {
+            Ok(dt) => dt.and_utc().timestamp_millis(),
+            Err(e) => {
+                warn!("Failed to parse timestamp '{}': {}", timestamp_str, e);
+                0 // Default to 0 if parsing fails
+            }
         };
 
         // The paths column contains a simple path string, not a JSON array
@@ -200,4 +203,110 @@ fn get_workspaces_from_db(db_path: &PathBuf, channel: &str) -> Result<Vec<Worksp
     }
     
     Ok(workspaces)
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::{Datelike, Timelike, NaiveDateTime};
+
+    /// Test parsing of Zed timestamp format "YYYY-MM-DD HH:MM:SS"
+    #[test]
+    fn test_parse_zed_timestamp() {
+        // Test the expected format from Zed
+        let timestamp_str = "2025-06-27 16:20:06";
+        
+        let result = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S");
+        
+        assert!(result.is_ok(), "Failed to parse timestamp: {:?}", result);
+        
+        let dt = result.unwrap();
+        assert_eq!(dt.year(), 2025);
+        assert_eq!(dt.month(), 6);
+        assert_eq!(dt.day(), 27);
+        assert_eq!(dt.hour(), 16);
+        assert_eq!(dt.minute(), 20);
+        assert_eq!(dt.second(), 6);
+        
+        // Verify it converts to milliseconds correctly
+        let timestamp_millis = dt.and_utc().timestamp_millis();
+        assert!(timestamp_millis > 0, "Timestamp should be positive");
+    }
+
+    /// Test parsing various valid timestamps
+    #[test]
+    fn test_parse_various_timestamps() {
+        let test_cases = vec![
+            ("2025-01-01 00:00:00", 2025, 1, 1, 0, 0, 0),
+            ("2025-12-31 23:59:59", 2025, 12, 31, 23, 59, 59),
+            ("2024-02-29 12:30:45", 2024, 2, 29, 12, 30, 45), // Leap year
+            ("2023-06-15 08:30:00", 2023, 6, 15, 8, 30, 0),
+        ];
+        
+        for (timestamp_str, year, month, day, hour, minute, second) in test_cases {
+            let result = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S");
+            assert!(result.is_ok(), "Failed to parse timestamp '{}': {:?}", timestamp_str, result);
+            
+            let dt = result.unwrap();
+            assert_eq!(dt.year(), year, "Year mismatch for '{}'", timestamp_str);
+            assert_eq!(dt.month(), month, "Month mismatch for '{}'", timestamp_str);
+            assert_eq!(dt.day(), day, "Day mismatch for '{}'", timestamp_str);
+            assert_eq!(dt.hour(), hour, "Hour mismatch for '{}'", timestamp_str);
+            assert_eq!(dt.minute(), minute, "Minute mismatch for '{}'", timestamp_str);
+            assert_eq!(dt.second(), second, "Second mismatch for '{}'", timestamp_str);
+        }
+    }
+
+    /// Test that invalid timestamps fail gracefully
+    #[test]
+    fn test_parse_invalid_timestamps() {
+        let invalid_cases = vec![
+            "",                                    // Empty string
+            "2025-06-27",                         // Missing time
+            "16:20:06",                           // Missing date
+            "2025/06/27 16:20:06",                // Wrong date separator
+            "2025-06-27T16:20:06",                // RFC 3339 format (should fail)
+            "not-a-timestamp",                    // Garbage
+            "2025-13-01 00:00:00",                // Invalid month
+            "2025-02-30 00:00:00",                // Invalid day
+            "2025-06-27 25:00:00",                // Invalid hour
+            "2025-06-27 16:60:00",                // Invalid minute
+            "2025-06-27 16:20:61",                // Invalid second (61 is out of range)
+        ];
+        
+        for timestamp_str in invalid_cases {
+            let result = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S");
+            assert!(result.is_err(), "Expected failure for invalid timestamp '{}', but got: {:?}",
+                    timestamp_str, result);
+        }
+    }
+
+    /// Test timestamp conversion to milliseconds
+    #[test]
+    fn test_timestamp_to_milliseconds() {
+        let timestamp_str = "2025-06-27 16:20:06";
+        let dt = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S").unwrap();
+        let millis = dt.and_utc().timestamp_millis();
+        
+        // Verify the timestamp is reasonable (2025-06-27 should be around 1751000000000 ms)
+        assert!(millis > 1_750_000_000_000, "Timestamp too small: {}", millis);
+        assert!(millis < 2_000_000_000_000, "Timestamp too large: {}", millis);
+    }
+
+    /// Test edge cases
+    #[test]
+    fn test_edge_cases() {
+        // Unix epoch (1970-01-01)
+        let epoch = "1970-01-01 00:00:00";
+        let result = NaiveDateTime::parse_from_str(epoch, "%Y-%m-%d %H:%M:%S");
+        assert!(result.is_ok());
+        let millis = result.unwrap().and_utc().timestamp_millis();
+        assert_eq!(millis, 0);
+        
+        // Far future date
+        let future = "2099-12-31 23:59:59";
+        let result = NaiveDateTime::parse_from_str(future, "%Y-%m-%d %H:%M:%S");
+        assert!(result.is_ok());
+        let millis = result.unwrap().and_utc().timestamp_millis();
+        assert!(millis > 4_000_000_000_000);
+    }
 }
