@@ -94,6 +94,7 @@ pub fn get_known_vscode_paths() -> Vec<String> {
         "Code - Insiders",
         "Cursor",
         "Antigravity",
+        "Antigravity IDE",
         "Kiro",
     ];
     let mut paths = Vec::new();
